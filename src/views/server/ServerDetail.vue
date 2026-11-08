@@ -34,8 +34,11 @@
         <template #header>
           <div class="card-header">
             <span>游戏环境</span>
-            <!-- 部署页完成后移除 disabled -->
-            <el-button type="primary" :icon="Plus" disabled @click="handleDeploy">部署游戏</el-button>
+            <el-tooltip :disabled="server.agentOnline" content="Agent 离线，请先重新连接">
+              <el-button type="primary" :icon="Plus" :disabled="!server.agentOnline" @click="isDeployVisible = true">
+                部署游戏
+              </el-button>
+            </el-tooltip>
           </div>
         </template>
         <el-space v-if="server.gameEnv.length" wrap>
@@ -69,6 +72,7 @@
   </div>
 
   <TaskLogDialog v-model="isLogVisible" :task="logTask" />
+  <DeployDialog v-if="server" v-model="isDeployVisible" :server="server" />
 </template>
 
 <script setup lang="ts">
@@ -81,6 +85,7 @@ import { formatBytes, formatDateTime } from '@/utils/format'
 import { Plus } from '@element-plus/icons-vue'
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import DeployDialog from './components/DeployDialog.vue'
 import ServerMetricsCard from './components/ServerMetricsCard.vue'
 
 const route = useRoute()
@@ -94,10 +99,7 @@ const taskStore = useTaskStore()
 const { isInstalling, install } = useAgentInstall()
 const isLogVisible = ref(false)
 const logTask = ref<Task>()
-
-function handleDeploy() {
-  router.push(`/server/${serverID}/deploy`)
-}
+const isDeployVisible = ref(false)
 
 async function loadTasks() {
   const res = await getTaskList({ page: 1, pageSize: 5, resourceType: 'server', resourceID: serverID })

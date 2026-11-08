@@ -69,3 +69,6 @@ export const installAgent = (id: number) => http.post<Task>(`/server/${id}/agent
 
 /** 最近 24 小时的资源使用情况，按时间升序 */
 export const getServerMetrics = (id: number) => http.get<{ list: ServerMetrics[] }>(`/server/${id}/metrics`)
+
+/** 部署游戏环境，返回部署任务；进度和日志通过任务查看 */
+export const deployGame = (id: number, gameCode: string) => http.post<Task>(`/server/${id}/deploy`, { gameCode })

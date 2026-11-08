@@ -3,10 +3,11 @@ import { http } from '@/utils/request'
 
 export type TaskStatus = 'pending' | 'running' | 'succeeded' | 'failed'
 
-export type TaskStage = 'queued' | 'connecting' | 'uploading' | 'installing' | 'waiting_online'
+export type TaskStage = 'queued' | 'connecting' | 'uploading' | 'installing' | 'waiting_online' | 'executing'
 
 /** 任务类型，与后端 entity.TaskType 一致 */
 export const TASK_TYPE_AGENT_INSTALL = 'agent_install'
+export const TASK_TYPE_GAME_DEPLOY = 'game_deploy'
 
 /** 与后端 TaskResp 对应 */
 export interface Task {
@@ -45,7 +46,8 @@ export const TASK_STAGE_MAP: Record<TaskStage, string> = {
   connecting: '连接服务器',
   uploading: '上传文件',
   installing: '安装服务',
-  waiting_online: '等待上线'
+  waiting_online: '等待上线',
+  executing: '执行中'
 }
 
 /** 与后端 TaskLogResp 对应 */

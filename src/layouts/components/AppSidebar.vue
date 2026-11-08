@@ -1,5 +1,8 @@
 <template>
-  <div class="logo">{{ isCollapsed ? 'DST' : '饥荒服务器管理' }}</div>
+  <div class="logo">
+    <img v-if="isCollapsed" :src="logoFold" alt="DST" class="fold" />
+    <img v-else :src="logoExpand" alt="饥荒服务器面板" class="expand" />
+  </div>
   <el-menu
     router
     :default-active="route.matched[1]?.path"
@@ -17,6 +20,8 @@
 </template>
 
 <script setup lang="ts">
+import logoExpand from '@/assets/images/logo_expand.webp'
+import logoFold from '@/assets/images/logo_fold.webp'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -32,12 +37,18 @@ const menus = computed(
 
 <style scoped>
 .logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 60px;
-  line-height: 60px;
-  text-align: center;
-  font-size: 16px;
-  font-weight: 600;
-  white-space: nowrap;
+}
+
+.expand {
+  height: 50px;
+}
+
+.fold {
+  height: 40px;
 }
 
 .menu {
