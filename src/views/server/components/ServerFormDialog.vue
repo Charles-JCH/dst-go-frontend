@@ -10,14 +10,15 @@
       <el-form-item label="名称" prop="name">
         <el-input v-model="form.name" />
       </el-form-item>
+      <!-- IP、端口、用户名添加后不可修改，换机器请重新添加服务器 -->
       <el-form-item label="IP" prop="ip">
-        <el-input v-model="form.ip" />
+        <el-input v-model="form.ip" :disabled="isEdit" />
       </el-form-item>
       <el-form-item label="SSH 端口" prop="port">
-        <el-input-number v-model="form.port" :min="1" :max="65535" controls-position="right" />
+        <el-input-number v-model="form.port" :min="1" :max="65535" :disabled="isEdit" controls-position="right" />
       </el-form-item>
       <el-form-item label="SSH 用户名" prop="username">
-        <el-input v-model="form.username" placeholder="root 或已配置 sudo 免密的用户" />
+        <el-input v-model="form.username" :disabled="isEdit" placeholder="root 或已配置 sudo 免密的用户" />
       </el-form-item>
       <el-form-item label="SSH 密码" prop="password">
         <el-input
@@ -27,6 +28,12 @@
           :placeholder="isEdit ? '不填写则不修改密码' : ''"
         />
       </el-form-item>
+      <el-alert
+        v-if="isEdit"
+        type="info"
+        :closable="false"
+        title="IP、端口、用户名不可修改，换机器请重新添加服务器。修改密码后，下次重新连接或更新 Agent 时使用新密码。"
+      />
     </el-form>
     <template #footer>
       <el-button @click="isVisible = false">取消</el-button>
@@ -80,9 +87,9 @@ async function handleSubmit() {
   isLoading.value = true
   try {
     if (props.server) {
-      // 密码不填表示不修改，不传该字段
-      const { password, ...rest } = form
-      await updateServer(props.server.id, password ? form : rest)
+      // 只提交名称和密码；密码不填表示不修改，不传该字段
+      const { name, password } = form
+      await updateServer(props.server.id, password ? { name, password } : { name })
     } else {
       await createServer(form)
     }

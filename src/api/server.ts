@@ -50,8 +50,8 @@ export interface CreateServerParams {
   password: string
 }
 
-/** 更新时 password 不填表示不修改密码 */
-export type UpdateServerParams = Omit<CreateServerParams, 'password'> & { password?: string }
+/** 添加后只能修改名称和 SSH 密码；password 不传表示不修改 */
+export type UpdateServerParams = Pick<CreateServerParams, 'name'> & { password?: string }
 
 export const getServerList = (params: PageParams) => http.get<PageResult<Server>>('/server', params)
 
