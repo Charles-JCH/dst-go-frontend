@@ -25,8 +25,21 @@ export interface Server {
   mods: string[]
   /** Agent 是否已连接平台 */
   agentOnline: boolean
+  /** 最近一次资源使用情况，Agent 离线或没有数据时为 null */
+  metrics: ServerMetrics | null
   createdAt: string
   updatedAt: string
+}
+
+/** 与后端 MetricsResp 对应：Agent 随心跳上报的资源使用情况；ramUsed、diskUsed 单位为字节，netRx、netTx 单位为字节/秒 */
+export interface ServerMetrics {
+  time: string
+  cpuPercent: number
+  ramUsed: number
+  diskUsed: number
+  load1: number
+  netRx: number
+  netTx: number
 }
 
 export interface CreateServerParams {
@@ -53,3 +66,6 @@ export const deleteServer = (id: number) => http.delete<void>(`/server/${id}`)
 
 /** 重新安装 Agent（安装失败后重试），返回新建的安装任务 */
 export const installAgent = (id: number) => http.post<Task>(`/server/${id}/agent/install`)
+
+/** 最近 24 小时的资源使用情况，按时间升序 */
+export const getServerMetrics = (id: number) => http.get<{ list: ServerMetrics[] }>(`/server/${id}/metrics`)

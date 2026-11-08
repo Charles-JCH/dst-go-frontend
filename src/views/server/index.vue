@@ -16,9 +16,30 @@
     <el-table-column prop="port" label="SSH 端口" width="100" />
     <el-table-column prop="osName" label="系统" min-width="120" :formatter="dash" />
     <el-table-column prop="arch" label="架构" width="90" :formatter="dash" />
-    <el-table-column prop="cpu" label="CPU 核数" width="100" :formatter="dash" />
-    <el-table-column prop="ram" label="内存" width="100" :formatter="bytes" />
-    <el-table-column prop="disk" label="磁盘" width="100" :formatter="bytes" />
+    <el-table-column label="CPU" width="120">
+      <template #default="{ row }: { row: Server }">
+        <UsageBar
+          :text="`${row.cpu || '-'} 核${row.metrics ? ` · ${row.metrics.cpuPercent.toFixed(0)}%` : ''}`"
+          :percent="row.metrics?.cpuPercent ?? null"
+        />
+      </template>
+    </el-table-column>
+    <el-table-column label="内存" width="160">
+      <template #default="{ row }: { row: Server }">
+        <UsageBar
+          :text="row.metrics ? formatUsage(row.metrics.ramUsed, row.ram) : formatBytes(row.ram)"
+          :percent="row.metrics ? toPercent(row.metrics.ramUsed, row.ram) : null"
+        />
+      </template>
+    </el-table-column>
+    <el-table-column label="磁盘" width="160">
+      <template #default="{ row }: { row: Server }">
+        <UsageBar
+          :text="row.metrics ? formatUsage(row.metrics.diskUsed, row.disk) : formatBytes(row.disk)"
+          :percent="row.metrics ? toPercent(row.metrics.diskUsed, row.disk) : null"
+        />
+      </template>
+    </el-table-column>
     <el-table-column prop="createdAt" label="创建时间" width="170" :formatter="dateTime" />
     <el-table-column label="Agent 状态" width="100" fixed="right">
       <template #default="{ row }">
@@ -49,11 +70,12 @@ import PageTable from '@/components/PageTable.vue'
 import { useAgentInstall } from '@/composables/useAgentInstall'
 import { usePageList } from '@/composables/usePageList'
 import { useTaskStore } from '@/stores/task'
-import { formatBytes, formatDateTime } from '@/utils/format'
+import { formatBytes, formatDateTime, formatUsage, toPercent } from '@/utils/format'
 import { Plus } from '@element-plus/icons-vue'
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import ServerFormDialog from './components/ServerFormDialog.vue'
+import UsageBar from './components/UsageBar.vue'
 
 const router = useRouter()
 const { list, total, isLoading, query, load } = usePageList(getServerList)
@@ -73,7 +95,20 @@ watch(
   () => taskStore.agentStatus,
   (status) => {
     const row = list.value.find((s) => s.id === status?.serverID)
-    if (row && status) row.agentOnline = status.online
+    if (!row || !status) return
+    row.agentOnline = status.online
+    if (!status.online) row.metrics = null // 离线后不再显示过期的占用
+  }
+)
+
+// Agent 随心跳上报资源使用情况时只更新对应行（约每 30 秒一次）
+watch(
+  () => taskStore.metrics,
+  (event) => {
+    if (!event) return
+    const { serverID, ...metrics } = event
+    const row = list.value.find((s) => s.id === serverID)
+    if (row) row.metrics = metrics
   }
 )
 
@@ -116,8 +151,7 @@ async function handleDelete(row: Server) {
   load()
 }
 
-// 表格列格式化：Agent 上报前 CPU、内存、磁盘等为空，显示 -
+// 表格列格式化：Agent 上报前系统、架构为空，显示 -
 const dash = (_row: unknown, _col: unknown, value: string | number) => String(value || '-')
-const bytes = (_row: unknown, _col: unknown, value: number) => formatBytes(value)
 const dateTime = (_row: unknown, _col: unknown, value: string) => formatDateTime(value)
 </script>

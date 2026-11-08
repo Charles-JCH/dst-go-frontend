@@ -1,5 +1,5 @@
 import { getWSTicket } from '@/api/auth'
-import type { Server } from '@/api/server'
+import type { Server, ServerMetrics } from '@/api/server'
 import { getActiveTasks, isTaskActive, type Task, type TaskLog } from '@/api/task'
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
@@ -13,12 +13,16 @@ export interface AgentStatus {
 /** 与后端 SysInfoResp 对应：Agent 上报的服务器系统配置 */
 export type SysInfo = Pick<Server, 'cpu' | 'ram' | 'disk' | 'osName' | 'arch'> & { serverID: number }
 
+/** 与后端 ServerMetricsResp 对应：某台服务器最新的资源使用情况 */
+export type ServerMetricsEvent = ServerMetrics & { serverID: number }
+
 /** 与后端 realtime.Event 对应 */
 type RealtimeEvent =
   | { type: 'task'; data: Task }
   | { type: 'task_log'; data: TaskLog }
   | { type: 'agent_status'; data: AgentStatus }
   | { type: 'sysinfo'; data: SysInfo }
+  | { type: 'metrics'; data: ServerMetricsEvent }
 
 const RECONNECT_DELAY = 3000
 /** 后台任务列表最多保留的条数（进行中 + 本次打开页面后结束的） */
@@ -42,6 +46,8 @@ export const useTaskStore = defineStore('task', () => {
   const agentStatus = shallowRef<AgentStatus>()
   /** 最近一次 Agent 上报的系统配置，服务器页面 watch 它更新配置 */
   const sysInfo = shallowRef<SysInfo>()
+  /** 最近一次 Agent 随心跳上报的资源使用情况，约每 30 秒一次 */
+  const metrics = shallowRef<ServerMetricsEvent>()
   const activeCount = computed(() => tasks.value.filter(isTaskActive).length)
 
   let socket: WebSocket | undefined
@@ -80,6 +86,7 @@ export const useTaskStore = defineStore('task', () => {
       else if (event.type === 'task_log') latestLog.value = event.data
       else if (event.type === 'agent_status') agentStatus.value = event.data
       else if (event.type === 'sysinfo') sysInfo.value = event.data
+      else if (event.type === 'metrics') metrics.value = event.data
     }
     ws.onclose = () => {
       if (socket === ws) socket = undefined
@@ -111,5 +118,5 @@ export const useTaskStore = defineStore('task', () => {
     tasks.value = []
   }
 
-  return { tasks, latest, latestLog, agentStatus, sysInfo, activeCount, upsert, connect, disconnect }
+  return { tasks, latest, latestLog, agentStatus, sysInfo, metrics, activeCount, upsert, connect, disconnect }
 })

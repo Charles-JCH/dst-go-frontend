@@ -28,10 +28,7 @@
         </el-descriptions>
       </el-card>
 
-      <el-card>
-        <template #header>资源使用率</template>
-        <el-empty description="暂未提供，需 Agent 支持后展示" :image-size="80" />
-      </el-card>
+      <ServerMetricsCard :server="server" />
 
       <el-card>
         <template #header>
@@ -84,6 +81,7 @@ import { formatBytes, formatDateTime } from '@/utils/format'
 import { Plus } from '@element-plus/icons-vue'
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ServerMetricsCard from './components/ServerMetricsCard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -136,7 +134,19 @@ watch(
 watch(
   () => taskStore.agentStatus,
   (status) => {
-    if (server.value && status?.serverID === serverID) server.value.agentOnline = status.online
+    if (!server.value || status?.serverID !== serverID) return
+    server.value.agentOnline = status.online
+    if (!status.online) server.value.metrics = null // 离线后不再显示过期的当前值
+  }
+)
+
+// Agent 随心跳上报资源使用情况时更新当前值（历史曲线由 ServerMetricsCard 自己追加）
+watch(
+  () => taskStore.metrics,
+  (event) => {
+    if (!event) return
+    const { serverID: eventServerID, ...metrics } = event
+    if (server.value && eventServerID === serverID) server.value.metrics = metrics
   }
 )
 
