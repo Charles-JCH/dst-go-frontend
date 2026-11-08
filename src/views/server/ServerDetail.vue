@@ -9,11 +9,14 @@
           <el-descriptions-item label="SSH 端口">{{ server.port }}</el-descriptions-item>
           <el-descriptions-item label="SSH 用户名">{{ server.username }}</el-descriptions-item>
           <el-descriptions-item label="Agent">
-            <el-tag v-if="server.agentOnline" type="success">在线</el-tag>
-            <el-tag v-else-if="isConnecting(serverID)" type="primary">连接中</el-tag>
+            <el-tag v-if="isInstalling(serverID)" type="primary">{{ server.agentOnline ? '更新中' : '连接中' }}</el-tag>
             <template v-else>
-              <el-tag type="info">离线</el-tag>
-              <el-button link type="primary" class="reconnect" @click="reconnect(serverID)">重新连接</el-button>
+              <el-tag :type="server.agentOnline ? 'success' : 'info'">{{
+                server.agentOnline ? '在线' : '离线'
+              }}</el-tag>
+              <el-button link type="primary" class="install" @click="install(server)">
+                {{ server.agentOnline ? '更新 Agent' : '重新连接' }}
+              </el-button>
             </template>
           </el-descriptions-item>
           <el-descriptions-item label="系统">{{ server.osName || '-' }}</el-descriptions-item>
@@ -75,7 +78,7 @@
 import { getServer, type Server } from '@/api/server'
 import { getTaskList, isTaskActive, TASK_STAGE_MAP, TASK_STATUS_MAP, type Task, type TaskStage } from '@/api/task'
 import TaskLogDialog from '@/components/TaskLogDialog.vue'
-import { useAgentReconnect } from '@/composables/useAgentReconnect'
+import { useAgentInstall } from '@/composables/useAgentInstall'
 import { useTaskStore } from '@/stores/task'
 import { formatBytes, formatDateTime } from '@/utils/format'
 import { Plus } from '@element-plus/icons-vue'
@@ -90,7 +93,7 @@ const server = ref<Server>()
 const tasks = ref<Task[]>([])
 const isLoading = ref(true)
 const taskStore = useTaskStore()
-const { isConnecting, reconnect } = useAgentReconnect()
+const { isInstalling, install } = useAgentInstall()
 const isLogVisible = ref(false)
 const logTask = ref<Task>()
 
@@ -160,7 +163,7 @@ const dateTime = (_row: unknown, _col: unknown, value: string) => formatDateTime
   min-height: 200px;
 }
 
-.reconnect {
+.install {
   margin-left: 8px;
 }
 

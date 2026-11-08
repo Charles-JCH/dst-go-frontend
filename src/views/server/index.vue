@@ -22,15 +22,15 @@
     <el-table-column prop="createdAt" label="创建时间" width="170" :formatter="dateTime" />
     <el-table-column label="Agent 状态" width="100" fixed="right">
       <template #default="{ row }">
-        <el-tag v-if="row.agentOnline" type="success">在线</el-tag>
-        <el-tag v-else-if="isConnecting(row.id)" type="primary">连接中</el-tag>
+        <el-tag v-if="isInstalling(row.id)" type="primary">{{ row.agentOnline ? '更新中' : '连接中' }}</el-tag>
+        <el-tag v-else-if="row.agentOnline" type="success">在线</el-tag>
         <el-tag v-else type="info">离线</el-tag>
       </template>
     </el-table-column>
-    <el-table-column label="操作" width="230" fixed="right">
+    <el-table-column label="操作" width="240" fixed="right">
       <template #default="{ row }">
-        <el-button v-if="!row.agentOnline && !isConnecting(row.id)" link type="primary" @click="reconnect(row.id)">
-          重新连接
+        <el-button v-if="!isInstalling(row.id)" link type="primary" @click="install(row)">
+          {{ row.agentOnline ? '更新 Agent' : '重新连接' }}
         </el-button>
         <el-button link type="primary" @click="handleDetail(row)">详情</el-button>
         <el-button link type="primary" @click="handleOpenDialog(row)">编辑</el-button>
@@ -46,7 +46,7 @@
 import { deleteServer, getServerList, type Server } from '@/api/server'
 import { isTaskActive, TASK_TYPE_AGENT_INSTALL } from '@/api/task'
 import PageTable from '@/components/PageTable.vue'
-import { useAgentReconnect } from '@/composables/useAgentReconnect'
+import { useAgentInstall } from '@/composables/useAgentInstall'
 import { usePageList } from '@/composables/usePageList'
 import { useTaskStore } from '@/stores/task'
 import { formatBytes, formatDateTime } from '@/utils/format'
@@ -58,7 +58,7 @@ import ServerFormDialog from './components/ServerFormDialog.vue'
 const router = useRouter()
 const { list, total, isLoading, query, load } = usePageList(getServerList)
 const taskStore = useTaskStore()
-const { isConnecting, reconnect } = useAgentReconnect()
+const { isInstalling, install } = useAgentInstall()
 
 // Agent 安装结束后刷新列表，更新在线状态
 watch(
