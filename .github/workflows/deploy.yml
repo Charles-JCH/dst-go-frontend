@@ -1,0 +1,63 @@
+# 推送到 main 后构建前端，替换平台服务器上的 /opt/game-panel/web
+# 需要的 Secrets 与后端仓库相同：DEPLOY_HOST、DEPLOY_USER、DEPLOY_SSH_KEY、DEPLOY_KNOWN_HOSTS
+name: 发布前端
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 同一时间只跑一次发布，后提交的排队等待，不打断正在进行的发布
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 构建
+        run: |
+          npm ci
+          npm run build
+          tar -czf game-panel-web.tar.gz -C dist .
+
+      - name: 配置 SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+
+      - name: 上传并更新
+        env:
+          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
+        run: |
+          scp game-panel-web.tar.gz "$TARGET:/tmp/"
+          # root 直接执行，其他用户通过免密 sudo 执行；新页面先放到 web.new，再整体替换 web
+          ssh "$TARGET" 'if [ "$(id -u)" = 0 ]; then bash -s; else sudo -n bash -s; fi' <<'REMOTE'
+          set -euo pipefail
+          APP=/opt/game-panel
+          PKG=/tmp/game-panel-web.tar.gz
+          trap 'rm -f "$PKG"' EXIT
+          rm -rf "$APP/web.new" "$APP/web.old"
+          mkdir -p "$APP/web.new"
+          tar -xzf "$PKG" -C "$APP/web.new"
+          chmod -R a+rX "$APP/web.new"
+          if [[ -d "$APP/web" ]]; then
+            mv "$APP/web" "$APP/web.old"
+          fi
+          mv "$APP/web.new" "$APP/web"
+          rm -rf "$APP/web.old"
+          echo "前端已更新"
+          REMOTE

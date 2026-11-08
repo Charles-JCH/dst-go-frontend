@@ -1,0 +1,161 @@
+<template>
+  <div v-loading="isLoading" class="detail">
+    <template v-if="server">
+      <el-card>
+        <template #header>基本信息</template>
+        <el-descriptions :column="3" border>
+          <el-descriptions-item label="名称">{{ server.name }}</el-descriptions-item>
+          <el-descriptions-item label="IP">{{ server.ip }}</el-descriptions-item>
+          <el-descriptions-item label="SSH 端口">{{ server.port }}</el-descriptions-item>
+          <el-descriptions-item label="SSH 用户名">{{ server.username }}</el-descriptions-item>
+          <el-descriptions-item label="Agent">
+            <el-tag v-if="server.agentOnline" type="success">在线</el-tag>
+            <el-tag v-else-if="isConnecting(serverID)" type="primary">连接中</el-tag>
+            <template v-else>
+              <el-tag type="info">离线</el-tag>
+              <el-button link type="primary" class="reconnect" @click="reconnect(serverID)">重新连接</el-button>
+            </template>
+          </el-descriptions-item>
+          <el-descriptions-item label="系统">{{ server.osName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="CPU 核数">{{ server.cpu || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="内存">{{ formatBytes(server.ram) }}</el-descriptions-item>
+          <el-descriptions-item label="磁盘">{{ formatBytes(server.disk) }}</el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ formatDateTime(server.createdAt) }}</el-descriptions-item>
+        </el-descriptions>
+      </el-card>
+
+      <el-card>
+        <template #header>资源使用率</template>
+        <el-empty description="暂未提供，需 Agent 支持后展示" :image-size="80" />
+      </el-card>
+
+      <el-card>
+        <template #header>
+          <div class="card-header">
+            <span>游戏环境</span>
+            <!-- 部署页完成后移除 disabled -->
+            <el-button type="primary" :icon="Plus" disabled @click="handleDeploy">部署游戏</el-button>
+          </div>
+        </template>
+        <el-space v-if="server.gameEnv.length" wrap>
+          <el-tag v-for="env in server.gameEnv" :key="env.code" size="large">{{ env.name }}</el-tag>
+        </el-space>
+        <el-empty v-else description="尚未部署游戏环境" :image-size="80" />
+      </el-card>
+
+      <el-card>
+        <template #header> 最近任务 </template>
+        <el-table :data="tasks">
+          <el-table-column prop="name" label="任务" min-width="160" />
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="TASK_STATUS_MAP[row.status as Task['status']].type">
+                {{ TASK_STATUS_MAP[row.status as Task['status']].label }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="stage" label="当前步骤" min-width="120" :formatter="stage" />
+          <el-table-column prop="errorMessage" label="失败原因" min-width="200" :formatter="dash" />
+          <el-table-column prop="createdAt" label="创建时间" width="170" :formatter="dateTime" />
+          <el-table-column label="操作" width="80">
+            <template #default="{ row }">
+              <el-button link type="primary" @click="handleOpenLogs(row)">日志</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+    </template>
+  </div>
+
+  <TaskLogDialog v-model="isLogVisible" :task="logTask" />
+</template>
+
+<script setup lang="ts">
+import { getServer, type Server } from '@/api/server'
+import { getTaskList, isTaskActive, TASK_STAGE_MAP, TASK_STATUS_MAP, type Task, type TaskStage } from '@/api/task'
+import TaskLogDialog from '@/components/TaskLogDialog.vue'
+import { useAgentReconnect } from '@/composables/useAgentReconnect'
+import { useTaskStore } from '@/stores/task'
+import { formatBytes, formatDateTime } from '@/utils/format'
+import { Plus } from '@element-plus/icons-vue'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
+const router = useRouter()
+const serverID = Number(route.params.id)
+
+const server = ref<Server>()
+const tasks = ref<Task[]>([])
+const isLoading = ref(true)
+const taskStore = useTaskStore()
+const { isConnecting, reconnect } = useAgentReconnect()
+const isLogVisible = ref(false)
+const logTask = ref<Task>()
+
+function handleDeploy() {
+  router.push(`/server/${serverID}/deploy`)
+}
+
+async function loadTasks() {
+  const res = await getTaskList({ page: 1, pageSize: 5, resourceType: 'server', resourceID: serverID })
+  tasks.value = res.list
+}
+
+function handleOpenLogs(task: Task) {
+  logTask.value = task
+  isLogVisible.value = true
+}
+
+onMounted(async () => {
+  try {
+    const [serverInfo] = await Promise.all([getServer(serverID), loadTasks()])
+    server.value = serverInfo
+  } catch {
+    router.replace('/server') // 服务器不存在或无权访问，错误提示已由 request 统一处理
+  } finally {
+    isLoading.value = false
+  }
+})
+
+// 本服务器的任务有变化时刷新任务列表，任务结束时刷新 Agent 在线状态
+watch(
+  () => taskStore.latest,
+  async (task) => {
+    if (task?.resourceType !== 'server' || task.resourceID !== serverID) return
+    await loadTasks().catch(() => {})
+    if (!isTaskActive(task)) server.value = await getServer(serverID).catch(() => server.value)
+  }
+)
+
+// Agent 上线或下线时更新在线状态
+watch(
+  () => taskStore.agentStatus,
+  (status) => {
+    if (server.value && status?.serverID === serverID) server.value.agentOnline = status.online
+  }
+)
+
+const dash = (_row: unknown, _col: unknown, value: string) => value || '-'
+const stage = (_row: unknown, _col: unknown, value: TaskStage) => TASK_STAGE_MAP[value] ?? '-'
+const dateTime = (_row: unknown, _col: unknown, value: string) => formatDateTime(value)
+</script>
+
+<style scoped>
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 200px;
+}
+
+.reconnect {
+  margin-left: 8px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+</style>
