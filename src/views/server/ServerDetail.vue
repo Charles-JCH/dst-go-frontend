@@ -17,9 +17,10 @@
             </template>
           </el-descriptions-item>
           <el-descriptions-item label="系统">{{ server.osName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="架构">{{ server.arch || '-' }}</el-descriptions-item>
           <el-descriptions-item label="CPU 核数">{{ server.cpu || '-' }}</el-descriptions-item>
           <el-descriptions-item label="内存">{{ formatBytes(server.ram) }}</el-descriptions-item>
-          <el-descriptions-item label="磁盘">{{ formatBytes(server.disk) }}</el-descriptions-item>
+          <el-descriptions-item label="磁盘（游戏分区）">{{ formatBytes(server.disk) }}</el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ formatDateTime(server.createdAt) }}</el-descriptions-item>
         </el-descriptions>
       </el-card>
@@ -133,6 +134,16 @@ watch(
   () => taskStore.agentStatus,
   (status) => {
     if (server.value && status?.serverID === serverID) server.value.agentOnline = status.online
+  }
+)
+
+// Agent 上报系统配置时更新基本信息
+watch(
+  () => taskStore.sysInfo,
+  (info) => {
+    if (!info) return
+    const { serverID: infoServerID, ...fields } = info
+    if (server.value && infoServerID === serverID) Object.assign(server.value, fields)
   }
 )
 

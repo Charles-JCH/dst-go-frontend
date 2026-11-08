@@ -1,4 +1,5 @@
 import { getWSTicket } from '@/api/auth'
+import type { Server } from '@/api/server'
 import { getActiveTasks, isTaskActive, type Task, type TaskLog } from '@/api/task'
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
@@ -9,11 +10,15 @@ export interface AgentStatus {
   online: boolean
 }
 
+/** 与后端 SysInfoResp 对应：Agent 上报的服务器系统配置 */
+export type SysInfo = Pick<Server, 'cpu' | 'ram' | 'disk' | 'osName' | 'arch'> & { serverID: number }
+
 /** 与后端 realtime.Event 对应 */
 type RealtimeEvent =
   | { type: 'task'; data: Task }
   | { type: 'task_log'; data: TaskLog }
   | { type: 'agent_status'; data: AgentStatus }
+  | { type: 'sysinfo'; data: SysInfo }
 
 const RECONNECT_DELAY = 3000
 /** 后台任务列表最多保留的条数（进行中 + 本次打开页面后结束的） */
@@ -35,6 +40,8 @@ export const useTaskStore = defineStore('task', () => {
   const latestLog = shallowRef<TaskLog>()
   /** 最近一次 Agent 上线或下线，服务器页面 watch 它更新在线状态 */
   const agentStatus = shallowRef<AgentStatus>()
+  /** 最近一次 Agent 上报的系统配置，服务器页面 watch 它更新配置 */
+  const sysInfo = shallowRef<SysInfo>()
   const activeCount = computed(() => tasks.value.filter(isTaskActive).length)
 
   let socket: WebSocket | undefined
@@ -72,6 +79,7 @@ export const useTaskStore = defineStore('task', () => {
       if (event.type === 'task') upsert(event.data)
       else if (event.type === 'task_log') latestLog.value = event.data
       else if (event.type === 'agent_status') agentStatus.value = event.data
+      else if (event.type === 'sysinfo') sysInfo.value = event.data
     }
     ws.onclose = () => {
       if (socket === ws) socket = undefined
@@ -103,5 +111,5 @@ export const useTaskStore = defineStore('task', () => {
     tasks.value = []
   }
 
-  return { tasks, latest, latestLog, agentStatus, activeCount, upsert, connect, disconnect }
+  return { tasks, latest, latestLog, agentStatus, sysInfo, activeCount, upsert, connect, disconnect }
 })

@@ -15,6 +15,7 @@
     <el-table-column prop="ip" label="IP" min-width="140" />
     <el-table-column prop="port" label="SSH 端口" width="100" />
     <el-table-column prop="osName" label="系统" min-width="120" :formatter="dash" />
+    <el-table-column prop="arch" label="架构" width="90" :formatter="dash" />
     <el-table-column prop="cpu" label="CPU 核数" width="100" :formatter="dash" />
     <el-table-column prop="ram" label="内存" width="100" :formatter="bytes" />
     <el-table-column prop="disk" label="磁盘" width="100" :formatter="bytes" />
@@ -76,6 +77,17 @@ watch(
   }
 )
 
+// Agent 上报系统配置时只更新对应行
+watch(
+  () => taskStore.sysInfo,
+  (info) => {
+    if (!info) return
+    const { serverID, ...fields } = info
+    const row = list.value.find((s) => s.id === serverID)
+    if (row) Object.assign(row, fields)
+  }
+)
+
 // 新增和编辑共用一个弹窗：editing 有值为编辑，为空为新增
 const isDialogVisible = ref(false)
 const editing = ref<Server>()
@@ -104,7 +116,7 @@ async function handleDelete(row: Server) {
   load()
 }
 
-// 表格列格式化：Agent 部署前 CPU、内存、磁盘等为空，显示 -
+// 表格列格式化：Agent 上报前 CPU、内存、磁盘等为空，显示 -
 const dash = (_row: unknown, _col: unknown, value: string | number) => String(value || '-')
 const bytes = (_row: unknown, _col: unknown, value: number) => formatBytes(value)
 const dateTime = (_row: unknown, _col: unknown, value: string) => formatDateTime(value)

@@ -19,6 +19,8 @@ export interface Server {
   ram: number
   disk: number
   osName: string
+  /** 系统架构，如 amd64、arm64 */
+  arch: string
   gameEnv: GameEnv[]
   mods: string[]
   /** Agent 是否已连接平台 */
