@@ -1,6 +1,6 @@
 <template>
   <el-card>
-    <template #header>资源使用率（最近 24 小时）</template>
+    <template #header>资源使用率（最近 1 小时）</template>
     <el-empty
       v-if="!points.length && !server.metrics"
       :description="server.agentOnline ? '等待 Agent 上报，约 30 秒一次' : 'Agent 离线，暂无数据'"
@@ -36,7 +36,7 @@ import { computed, onMounted, shallowRef, watch } from 'vue'
 import MetricsChart, { type ChartSeries } from './MetricsChart.vue'
 
 /** 与后端 cache.MetricsRetention 一致 */
-const RETENTION_MS = 24 * 60 * 60 * 1000
+const RETENTION_MS = 60 * 60 * 1000
 
 const props = defineProps<{ server: Server }>()
 
@@ -49,7 +49,7 @@ onMounted(async () => {
   if (res) points.value = res.list
 })
 
-// 收到本服务器的新采样点时追加，并去掉超过 24 小时的点
+// 收到本服务器的新采样点时追加，并去掉超过 1 小时的点
 watch(
   () => taskStore.metrics,
   (event) => {
