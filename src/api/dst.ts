@@ -57,4 +57,11 @@ export const initDst = (data: InitDstParams) => http.post<Task>('/dst/init', dat
 /** 返回创建任务：配置写入服务器成功后存档才保存 */
 export const createDst = (data: CreateDstParams) => http.post<Task>('/dst', data)
 
-export const updateDst = (id: number, data: UpdateDstParams) => http.put<void>(`/dst/${id}`, data)
+/** 返回配置写入任务：写入服务器成功后存档才更新 */
+export const updateDst = (id: number, data: UpdateDstParams) => http.put<Task>(`/dst/${id}`, data)
+
+/** 返回启动任务，成功后存档变为运行中；启动需要等待世界生成，通常 1～3 分钟 */
+export const startDst = (id: number) => http.post<Task>(`/dst/${id}/start`)
+
+/** 返回停止任务，成功后存档变为已停止 */
+export const stopDst = (id: number) => http.post<Task>(`/dst/${id}/stop`)
