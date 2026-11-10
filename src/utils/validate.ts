@@ -60,3 +60,46 @@ export const ipRules: FormItemRule[] = [
     trigger: 'blur'
   }
 ]
+
+/** 存档槽位数，与后端 CreateDstReq.Slot 一致 */
+export const DST_SLOT_COUNT = 5
+
+/** 与后端 singleline 一致：内容会写入游戏配置文件，不能含换行等控制字符 */
+const SINGLE_LINE = /^[^\p{Cc}]*$/u
+/** 与后端 printascii 一致 */
+const PRINTABLE_ASCII = /^[\x20-\x7E]*$/
+
+export const dstNameRules: FormItemRule[] = [
+  { required: true, whitespace: true, message: '请输入存档名称', trigger: 'blur' },
+  { max: 64, message: '名称最长 64 位', trigger: 'blur' },
+  { pattern: SINGLE_LINE, message: '名称不能包含换行等控制字符', trigger: 'blur' }
+]
+
+export const dstDescriptionRules: FormItemRule[] = [
+  { max: 255, message: '描述最长 255 位', trigger: 'blur' },
+  { pattern: SINGLE_LINE, message: '描述不能包含换行等控制字符', trigger: 'blur' }
+]
+
+export const dstPasswordRules = (isRequired: boolean): FormItemRule[] => [
+  ...(isRequired ? [{ required: true, message: '请输入房间密码', trigger: 'blur' }] : []),
+  { max: 64, message: '密码最长 64 位', trigger: 'blur' },
+  { pattern: PRINTABLE_ASCII, message: '密码只能包含英文、数字和符号', trigger: 'blur' }
+]
+
+export const clusterTokenRules = (isRequired: boolean): FormItemRule[] => [
+  ...(isRequired ? [{ required: true, whitespace: true, message: '请输入科雷令牌', trigger: 'blur' }] : []),
+  { max: 255, message: '令牌最长 255 位', trigger: 'blur' },
+  { pattern: PRINTABLE_ASCII, message: '令牌格式不正确', trigger: 'blur' }
+]
+
+/** 与后端一致：最多 200 个，每个为不超过 32 位的数字 */
+export const modsRules: FormItemRule[] = [
+  {
+    validator: (_rule, value: string[], callback) => {
+      if (value.length > 200) return callback(new Error('模组最多 200 个'))
+      const invalid = value.find((id) => !/^\d{1,32}$/.test(id))
+      callback(invalid ? new Error(`模组 ID「${invalid}」不正确，应为创意工坊的数字 ID`) : undefined)
+    },
+    trigger: 'change'
+  }
+]

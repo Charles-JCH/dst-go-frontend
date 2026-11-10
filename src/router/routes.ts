@@ -1,4 +1,4 @@
-import { Monitor, Odometer } from '@element-plus/icons-vue'
+import { FolderOpened, Monitor, Odometer } from '@element-plus/icons-vue'
 import { RouterView, type RouteRecordRaw } from 'vue-router'
 
 export const routes: RouteRecordRaw[] = [
@@ -52,6 +52,12 @@ export const routes: RouteRecordRaw[] = [
             meta: { title: '服务器详情' }
           }
         ]
+      },
+      {
+        path: 'dst',
+        name: 'DstList',
+        component: () => import('@/views/dst/index.vue'),
+        meta: { title: '存档管理', icon: FolderOpened }
       }
     ]
   },
