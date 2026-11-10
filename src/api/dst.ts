@@ -65,3 +65,13 @@ export const startDst = (id: number) => http.post<Task>(`/dst/${id}/start`)
 
 /** 返回停止任务，成功后存档变为已停止 */
 export const stopDst = (id: number) => http.post<Task>(`/dst/${id}/stop`)
+
+/** 返回查看状态任务，成功后存档状态按服务器上的实际情况更新 */
+export const checkDstStatus = (id: number) => http.post<Task>(`/dst/${id}/status`)
+
+/**
+ * 删除存档：返回删除任务，服务器上的存档清理成功后记录才删除；
+ * isRecordOnly 为 true 时只删除平台记录（Agent 离线时使用），返回 null
+ */
+export const deleteDst = (id: number, isRecordOnly = false) =>
+  http.delete<Task | null>(`/dst/${id}`, { recordOnly: isRecordOnly })
