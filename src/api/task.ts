@@ -8,6 +8,7 @@ export type TaskStage = 'queued' | 'connecting' | 'uploading' | 'installing' | '
 /** 任务类型，与后端 entity.TaskType 一致 */
 export const TASK_TYPE_AGENT_INSTALL = 'agent_install'
 export const TASK_TYPE_GAME_DEPLOY = 'game_deploy'
+export const TASK_TYPE_GAME_UPDATE = 'game_update'
 export const TASK_TYPE_DST_INIT = 'dst_init'
 export const TASK_TYPE_DST_CREATE = 'dst_create'
 export const TASK_TYPE_DST_START = 'dst_start'

@@ -41,9 +41,27 @@
             </el-tooltip>
           </div>
         </template>
-        <el-space v-if="server.gameEnv.length" wrap>
-          <el-tag v-for="env in server.gameEnv" :key="env.code" size="large">{{ env.name }}</el-tag>
-        </el-space>
+        <el-table v-if="server.gameEnv.length" :data="server.gameEnv">
+          <el-table-column prop="name" label="游戏" min-width="160" />
+          <el-table-column label="状态" width="120">
+            <template #default>
+              <el-tag v-if="activeUpdateTask" type="primary">更新中</el-tag>
+              <el-tag v-else type="success">已部署</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="160">
+            <template #default="{ row }: { row: GameEnv }">
+              <el-button v-if="activeUpdateTask" link type="primary" @click="handleOpenLogs(activeUpdateTask)">
+                查看日志
+              </el-button>
+              <el-tooltip v-else :disabled="server.agentOnline" content="Agent 离线，请先重新连接">
+                <el-button link type="primary" :disabled="!server.agentOnline" @click="handleUpdateGame(row)">
+                  检查更新
+                </el-button>
+              </el-tooltip>
+            </template>
+          </el-table-column>
+        </el-table>
         <el-empty v-else description="尚未部署游戏环境" :image-size="80" />
       </el-card>
 
@@ -76,14 +94,22 @@
 </template>
 
 <script setup lang="ts">
-import { getServer, type Server } from '@/api/server'
-import { getTaskList, isTaskActive, TASK_STAGE_MAP, TASK_STATUS_MAP, type Task, type TaskStage } from '@/api/task'
+import { getServer, updateGame, type GameEnv, type Server } from '@/api/server'
+import {
+  getTaskList,
+  isTaskActive,
+  TASK_STAGE_MAP,
+  TASK_STATUS_MAP,
+  TASK_TYPE_GAME_UPDATE,
+  type Task,
+  type TaskStage
+} from '@/api/task'
 import TaskLogDialog from '@/components/TaskLogDialog.vue'
 import { useAgentInstall } from '@/composables/useAgentInstall'
 import { useTaskStore } from '@/stores/task'
 import { formatBytes, formatDateTime } from '@/utils/format'
 import { Plus } from '@element-plus/icons-vue'
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import DeployDialog from './components/DeployDialog.vue'
 import ServerMetricsCard from './components/ServerMetricsCard.vue'
@@ -109,6 +135,27 @@ async function loadTasks() {
 function handleOpenLogs(task: Task) {
   logTask.value = task
   isLogVisible.value = true
+}
+
+/** 进行中的游戏更新任务；同一台服务器同时只执行一个命令，按类型即可找到 */
+const activeUpdateTask = computed(() =>
+  taskStore.tasks.find((t) => t.type === TASK_TYPE_GAME_UPDATE && t.resourceID === serverID && isTaskActive(t))
+)
+
+// 检查更新：下载新版本可能需要几分钟，打开日志窗口查看进度
+async function handleUpdateGame(env: GameEnv) {
+  try {
+    await ElMessageBox.confirm(
+      `将检查${env.name}是否有新版本，有新版本时自动下载更新。更新前需要先停止该服务器上所有运行中的存档，已是最新版本时不受影响。`,
+      '检查更新',
+      { type: 'info' }
+    )
+    const task = await updateGame(serverID, env.code)
+    taskStore.upsert(task)
+    handleOpenLogs(task)
+  } catch {
+    // 取消，或下发失败（错误提示已由 request 统一处理，如服务器正在执行其他操作）
+  }
 }
 
 onMounted(async () => {

@@ -72,3 +72,6 @@ export const getServerMetrics = (id: number) => http.get<{ list: ServerMetrics[]
 
 /** 部署游戏环境，返回部署任务；进度和日志通过任务查看 */
 export const deployGame = (id: number, gameCode: string) => http.post<Task>(`/server/${id}/deploy`, { gameCode })
+
+/** 检查并更新游戏服务端，返回更新任务；已是最新时任务直接成功，有新版本时需先停止该服务器上的所有存档 */
+export const updateGame = (id: number, gameCode: string) => http.post<Task>(`/server/${id}/game/update`, { gameCode })

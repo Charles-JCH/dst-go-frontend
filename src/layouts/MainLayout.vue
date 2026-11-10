@@ -37,8 +37,9 @@ onUnmounted(taskStore.disconnect)
   height: 100%;
 }
 
+/* 外框不滚动，由侧边栏内的菜单区域自己滚动；展开过渡时内容比外框宽，直接裁掉，不出现滚动条 */
 .el-aside {
-  overflow-x: hidden;
+  overflow: hidden;
   background-color: var(--el-bg-color);
   border-right: 1px solid var(--el-border-color-light);
   transition: width 0.3s;
