@@ -15,6 +15,7 @@ export const TASK_TYPE_DST_START = 'dst_start'
 export const TASK_TYPE_DST_STOP = 'dst_stop'
 export const TASK_TYPE_DST_STATUS = 'dst_status'
 export const TASK_TYPE_DST_DELETE = 'dst_delete'
+export const TASK_TYPE_DST_WORLD = 'dst_world'
 
 /** 与后端 TaskResp 对应 */
 export interface Task {

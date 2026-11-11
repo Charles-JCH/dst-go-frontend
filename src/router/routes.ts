@@ -55,9 +55,17 @@ export const routes: RouteRecordRaw[] = [
       },
       {
         path: 'dst',
-        name: 'DstList',
-        component: () => import('@/views/dst/index.vue'),
-        meta: { title: '存档管理', icon: FolderOpened }
+        component: RouterView,
+        meta: { title: '存档管理', icon: FolderOpened },
+        children: [
+          { path: '', name: 'DstList', component: () => import('@/views/dst/index.vue') },
+          {
+            path: ':id',
+            name: 'DstDetail',
+            component: () => import('@/views/dst/DstDetail.vue'),
+            meta: { title: '存档详情' }
+          }
+        ]
       }
     ]
   },

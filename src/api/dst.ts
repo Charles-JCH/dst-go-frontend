@@ -18,6 +18,12 @@ export interface Dst {
   hasPassword: boolean
   status: number
   mods: string[]
+  /** 与默认值不同的地面世界设置，未出现的项取 WorldOption.default */
+  masterOverrides: Record<string, string>
+  /** 与默认值不同的洞穴世界设置 */
+  cavesOverrides: Record<string, string>
+  /** 世界设置已保存但还未应用到服务器 */
+  isWorldPending: boolean
   createdAt: string
   updatedAt: string
 }
@@ -28,6 +34,42 @@ export interface ListDstParams extends PageParams {
 }
 
 export const getDstList = (params: ListDstParams) => http.get<PageResult<Dst>>('/dst', params)
+
+export const getDst = (id: number) => http.get<Dst>(`/dst/${id}`)
+
+/** 与后端 WorldOptionResp 对应；category 为 worldgen（仅生成新世界时生效）或 settings（重启存档后生效） */
+export interface WorldOption {
+  name: string
+  label: string
+  category: 'worldgen' | 'settings'
+  group: string
+  groupLabel: string
+  default: string
+  options: { value: string; label: string }[]
+}
+
+/** 与后端 WorldOptionsResp 对应：地面和洞穴可修改的世界设置，按游戏中的分组和顺序排列 */
+export interface WorldOptions {
+  master: WorldOption[]
+  caves: WorldOption[]
+}
+
+export const getWorldOptions = () => http.get<WorldOptions>('/dst/world-options')
+
+/** 世界设置分片：地面、洞穴 */
+export type WorldShard = 'master' | 'caves'
+
+/** overrides 只传与默认值不同的项 */
+export interface SaveDstWorldParams {
+  shard: WorldShard
+  overrides: Record<string, string>
+}
+
+/** 保存地面或洞穴的世界设置，只存平台不写服务器，返回存档（isWorldPending 变为 true） */
+export const saveDstWorld = (id: number, data: SaveDstWorldParams) => http.put<Dst>(`/dst/${id}/world`, data)
+
+/** 应用配置：把已保存的地面和洞穴设置写入服务器，返回写入任务；成功后 isWorldPending 变为 false */
+export const applyDstWorld = (id: number) => http.post<Task>(`/dst/${id}/world/apply`)
 
 /** 新增存档第一步：初始化会清空该槽位在服务器上的目录，再拉取默认存档 */
 export interface InitDstParams {

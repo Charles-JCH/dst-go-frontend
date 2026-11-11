@@ -35,7 +35,7 @@
         <el-tag v-else type="info">已停止</el-tag>
       </template>
     </el-table-column>
-    <el-table-column label="操作" width="260" fixed="right">
+    <el-table-column label="操作" width="300" fixed="right">
       <template #default="{ row }: { row: Dst }">
         <!-- 有进行中的命令时只能看日志。状态与实际不符时（如进程意外退出）点一次即可纠正：脚本对已停止再停止、已运行再启动都直接成功 -->
         <el-button v-if="activeTask(row.id)" link type="primary" @click="showLog(activeTask(row.id))">
@@ -51,6 +51,7 @@
         </el-button>
         <el-button v-else link type="success" @click="handleControl(row, startDst)">启动</el-button>
         <el-button v-if="!activeTask(row.id)" link type="primary" @click="handleCheckStatus(row)">状态</el-button>
+        <el-button link type="primary" @click="router.push(`/dst/${row.id}`)">详情</el-button>
         <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
         <el-button v-if="!activeTask(row.id)" link type="danger" @click="handleDelete(row)">删除</el-button>
       </template>
@@ -80,8 +81,11 @@ import { formatDateTime } from '@/utils/format'
 import { Plus } from '@element-plus/icons-vue'
 import { useTaskStore } from '@/stores/task'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import DstCreateDialog from './components/DstCreateDialog.vue'
 import DstFormDialog from './components/DstFormDialog.vue'
+
+const router = useRouter()
 
 // 筛选的服务器，为空表示全部
 const serverID = ref<number>()

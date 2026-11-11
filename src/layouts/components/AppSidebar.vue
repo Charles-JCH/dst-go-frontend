@@ -18,10 +18,8 @@
         <template #title>{{ item.meta?.title }}</template>
       </el-menu-item>
     </el-menu>
-    <!-- 折叠后宽度只有 64px，图片缩得太小看不清，直接隐藏；展开时等宽度过渡快结束再淡入，避免被挤压变形 -->
-    <Transition name="side-image">
-      <img v-if="!isCollapsed" :src="sideImage" alt="" class="side-image" />
-    </Transition>
+    <!-- 折叠后宽度只有 64px，图片缩得太小看不清，直接隐藏 -->
+    <img v-if="!isCollapsed" :src="sideImage" alt="" class="side-image" />
   </div>
 </template>
 
@@ -80,14 +78,6 @@ const menus = computed(
   margin: 12px auto 16px;
   pointer-events: none;
   user-select: none;
-}
-
-.side-image-enter-active {
-  transition: opacity 0.2s ease 0.2s;
-}
-
-.side-image-enter-from {
-  opacity: 0;
 }
 
 /* 窗口太矮时优先保证菜单可用 */

@@ -219,7 +219,7 @@ const dateTime = (_row: unknown, _col: unknown, value: string) => formatDateTime
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-height: 200px;
+  min-height: 100%; /* 占满内容区，加载时 loading 显示在可视区域中间 */
 }
 
 .install {
