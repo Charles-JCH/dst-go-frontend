@@ -1,15 +1,20 @@
 <template>
   <div class="toolbar">
     <span class="changed-count">已修改 {{ changedCount }} 项（相对默认值）</span>
-    <el-button link type="primary" @click="handleExpandAll">全部展开</el-button>
+    <el-button link type="primary" :disabled="isAllExpanded" @click="activeNames = [...allGroupKeys]"
+      >全部展开</el-button
+    >
     <el-button link type="primary" :disabled="!activeNames.length" @click="activeNames = []">全部收起</el-button>
     <el-button link type="primary" :disabled="!changedCount || disabled" @click="handleReset">全部恢复默认</el-button>
   </div>
   <el-form :disabled="disabled">
     <section v-for="category in categories" :key="category.name">
-      <h3 class="category">
-        {{ category.label }}<span class="category-tip">{{ category.tip }}</span>
-      </h3>
+      <!-- 类别只是标题，不能折叠：灰底 + 彩色竖条 + 图标，没有箭头，与下面可展开的分组区分开 -->
+      <div class="category" :class="category.name">
+        <el-icon class="category-icon"><component :is="category.icon" /></el-icon>
+        <span class="category-label">{{ category.label }}</span>
+        <span class="category-tip">{{ category.tip }}</span>
+      </div>
       <el-collapse v-model="activeNames">
         <el-collapse-item v-for="group in category.groups" :key="group.key" :name="group.key">
           <template #title>
@@ -47,7 +52,8 @@
 
 <script setup lang="ts">
 import type { WorldOption } from '@/api/dst'
-import { computed, ref, shallowReactive, watch } from 'vue'
+import { MagicStick, Setting } from '@element-plus/icons-vue'
+import { computed, markRaw, ref, shallowReactive, watch } from 'vue'
 
 const props = defineProps<{ options: WorldOption[]; disabled?: boolean }>()
 /** 设置项 → 当前值，包含全部设置项 */
@@ -56,8 +62,8 @@ const values = defineModel<Record<string, string>>({ required: true })
 const ICON_BASE = `${import.meta.env.BASE_URL}world-icons/`
 
 const CATEGORIES = [
-  { name: 'worldgen', label: '世界生成', tip: '仅生成新世界时生效，已有世界需重新生成' },
-  { name: 'settings', label: '世界选项', tip: '重启存档后生效' }
+  { name: 'worldgen', label: '世界生成', tip: '仅生成新世界时生效，已有世界需重新生成', icon: markRaw(MagicStick) },
+  { name: 'settings', label: '世界选项', tip: '重启存档后生效', icon: markRaw(Setting) }
 ] as const
 
 /** 按类别、分组整理，保持游戏中的顺序；目录固定，只在加载时计算一次。不同类别下可能有同名分组，key 带上类别 */
@@ -85,9 +91,9 @@ const renderedNames = shallowReactive(new Set<string>())
 
 watch(activeNames, (names) => names.forEach((name) => renderedNames.add(name)))
 
-function handleExpandAll() {
-  activeNames.value = categories.value.flatMap((c) => c.groups.map((g) => g.key))
-}
+const allGroupKeys = computed(() => categories.value.flatMap((c) => c.groups.map((g) => g.key)))
+/** 手动逐个展开到全部展开时也算 */
+const isAllExpanded = computed(() => allGroupKeys.value.every((key) => activeNames.value.includes(key)))
 
 const changedOf = (options: WorldOption[]) => options.filter((o) => values.value[o.name] !== o.default).length
 const changedCount = computed(() => changedOf(props.options))
@@ -116,15 +122,51 @@ function handleReset() {
 }
 
 .category {
-  margin: 16px 0 8px;
-  font-size: 16px;
+  --category-color: var(--el-color-primary);
+
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  margin: 20px 0 4px;
+  cursor: default;
+  user-select: none;
+  background-color: var(--el-fill-color-light);
+  border-left: 4px solid var(--category-color);
+  border-radius: 4px;
+}
+
+/* 世界生成只对新世界生效，用警示色提醒 */
+.category.worldgen {
+  --category-color: var(--el-color-warning);
+}
+
+.category-icon {
+  font-size: 18px;
+  color: var(--category-color);
+}
+
+.category-label {
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .category-tip {
-  margin-left: 12px;
   font-size: 13px;
-  font-weight: normal;
   color: var(--el-text-color-secondary);
+}
+
+/* 分组标题：鼠标移入时背景变浅灰、组名变主题色，提示可以点击展开或收起 */
+.el-collapse :deep(.el-collapse-item__header) {
+  padding: 0 12px;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.el-collapse :deep(.el-collapse-item__header:hover) {
+  color: var(--el-color-primary);
+  background-color: var(--el-fill-color-light);
 }
 
 .group {
@@ -153,6 +195,7 @@ function handleReset() {
   width: 32px;
   height: 32px;
   margin-right: 8px;
+  transition: transform 0.2s;
 }
 
 .label {
@@ -170,6 +213,22 @@ function handleReset() {
 .select {
   flex-shrink: 0;
   width: 180px;
+}
+
+/* 每个设置项是一个圆角小块，鼠标移入时背景变浅灰、图标微微放大 */
+.grid .el-form-item {
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.grid .el-form-item:hover {
+  background-color: var(--el-fill-color-light);
+}
+
+.grid .el-form-item:hover .icon {
+  transform: scale(1.15);
 }
 
 .el-form-item :deep(.el-form-item__content) {
